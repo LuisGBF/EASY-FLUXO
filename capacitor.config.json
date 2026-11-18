@@ -1,0 +1,12 @@
+{
+  "appId": "com.ciclolivre.app",
+  "appName": "CicloLivre",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#fafaf9"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
