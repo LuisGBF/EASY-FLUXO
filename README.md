@@ -68,4 +68,4 @@ tools/             # scripts auxiliares (geração de ícones/splash)
 ## Privacidade
 
 Nenhum dado sai do dispositivo: não há backend, conta ou telemetria. Os registros ficam no
-armazenamento local do app.
+armazenamento local do app.....
