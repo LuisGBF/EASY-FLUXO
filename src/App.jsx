@@ -855,7 +855,19 @@ function TodayTab({
 /* Aba: Calendário                                                     */
 /* ------------------------------------------------------------------ */
 
-function CalendarTab({ profile, analytics, currentMonth, setCurrentMonth, onDayClick, selectedDateKey }) {
+function CalendarTab({
+  profile,
+  analytics,
+  currentMonth,
+  setCurrentMonth,
+  onDayClick,
+  selectedDateKey,
+  selectionMode,
+  selectedDays,
+  onToggleSelectionMode,
+  onToggleDay,
+  onOpenBatch,
+}) {
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
   const firstDay = new Date(year, month, 1);
@@ -910,6 +922,24 @@ function CalendarTab({ profile, analytics, currentMonth, setCurrentMonth, onDayC
           </button>
         </div>
 
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <p className="text-[11px] text-stone-500 leading-snug">
+            {selectionMode
+              ? 'Toque nos dias e aplique as mesmas opções de uma vez.'
+              : 'Toque em um dia para registrar.'}
+          </p>
+          <button
+            onClick={onToggleSelectionMode}
+            className={`shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg border transition ${
+              selectionMode
+                ? 'bg-stone-900 text-white border-stone-900'
+                : 'bg-white text-stone-600 border-stone-200 active:bg-stone-50'
+            }`}
+          >
+            {selectionMode ? 'Cancelar seleção' : 'Selecionar dias'}
+          </button>
+        </div>
+
         <div className="grid grid-cols-7 gap-1 mb-1">
           {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
             <div key={`${d}-${i}`} className="text-center text-[10px] font-semibold text-stone-400 py-1">
@@ -924,7 +954,8 @@ function CalendarTab({ profile, analytics, currentMonth, setCurrentMonth, onDayC
             const key = formatDateKey(day);
             const log = profile.logs[key] || {};
             const isToday = key === todayKey;
-            const isSelected = key === selectedDateKey;
+            const isSelected = !selectionMode && key === selectedDateKey;
+            const isMultiSelected = selectionMode && selectedDays.includes(key);
             const hasFlow = (log.flow || []).some((f) => PERIOD_FLOWS.includes(f));
             const hasSpotting = (log.flow || []).includes('Escape (Spotting)');
             const hasSymptoms =
@@ -937,15 +968,17 @@ function CalendarTab({ profile, analytics, currentMonth, setCurrentMonth, onDayC
             return (
               <button
                 key={key}
-                onClick={() => onDayClick(key)}
+                onClick={() => (selectionMode ? onToggleDay(key) : onDayClick(key))}
                 className={`relative aspect-square rounded-xl flex flex-col items-center justify-center border transition ${
-                  isSelected
-                    ? 'border-rose-500 bg-rose-50'
-                    : isToday
-                      ? 'border-rose-300 bg-white'
-                      : isPredicted
-                        ? 'border-rose-100 bg-rose-50/60'
-                        : 'border-transparent bg-white active:bg-stone-50'
+                  isMultiSelected
+                    ? 'border-rose-500 bg-rose-100 ring-2 ring-rose-300'
+                    : isSelected
+                      ? 'border-rose-500 bg-rose-50'
+                      : isToday
+                        ? 'border-rose-300 bg-white'
+                        : isPredicted
+                          ? 'border-rose-100 bg-rose-50/60'
+                          : 'border-transparent bg-white active:bg-stone-50'
                 }`}
               >
                 <span
@@ -962,6 +995,11 @@ function CalendarTab({ profile, analytics, currentMonth, setCurrentMonth, onDayC
                   )}
                   {hasSymptoms && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
                 </span>
+                {isMultiSelected && (
+                  <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-rose-600 text-white flex items-center justify-center">
+                    <Check className="w-3 h-3" />
+                  </span>
+                )}
               </button>
             );
           })}
