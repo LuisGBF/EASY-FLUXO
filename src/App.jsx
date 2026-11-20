@@ -1677,6 +1677,112 @@ function LogSheet({ profile, dateKey, onChangeDate, onClose, toggleOption, updat
 }
 
 /* ------------------------------------------------------------------ */
+/* Modal: registro em vários dias                                      */
+/* ------------------------------------------------------------------ */
+
+function BatchLogSheet({ profile, days, onClose, onApply }) {
+  const [patch, setPatch] = useState({});
+  const hasHysterectomy = (profile.conditions || []).includes('hysterectomy');
+  const categories = DAILY_CATEGORIES.filter((c) => !(hasHysterectomy && c.key === 'flow'));
+  const ordered = [...days].sort();
+  const selectedCount = Object.values(patch).reduce((acc, list) => acc + list.length, 0);
+
+  const toggle = (categoryKey, option) => {
+    setPatch((prev) => {
+      const current = prev[categoryKey] || [];
+      const next = current.includes(option)
+        ? current.filter((item) => item !== option)
+        : [...current, option];
+      const copy = { ...prev };
+      if (next.length > 0) copy[categoryKey] = next;
+      else delete copy[categoryKey];
+      return copy;
+    });
+  };
+
+  const rangeLabel =
+    ordered.length === 1
+      ? formatBR(ordered[0], { weekday: 'short', day: '2-digit', month: 'short' })
+      : `${formatBR(ordered[0], { day: '2-digit', month: '2-digit' })} a ${formatBR(
+          ordered[ordered.length - 1],
+          { day: '2-digit', month: '2-digit' }
+        )}`;
+
+  return (
+    <div className="fixed inset-0 z-50 bg-stone-900/40 flex items-end justify-center">
+      <div className="w-full max-w-lg bg-stone-50 rounded-t-3xl max-h-[92vh] flex flex-col sheet-anim">
+        <div className="sticky top-0 bg-stone-50 rounded-t-3xl border-b border-stone-200 px-4 py-3 flex items-center justify-between">
+          <div>
+            <p className="text-[10px] uppercase font-semibold text-stone-400">Registro em vários dias</p>
+            <h2 className="text-base font-bold text-stone-900">
+              {ordered.length} {ordered.length === 1 ? 'dia selecionado' : 'dias selecionados'}
+            </h2>
+            <p className="text-[11px] text-stone-500 mt-0.5">{rangeLabel}</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg bg-stone-200 text-stone-700">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto px-4 py-4 space-y-5 pb-8">
+          <div className="flex gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
+            <Info className="w-4 h-4 shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              Marque o que aconteceu nesses dias. O que já estiver registrado é mantido e somado — nada
+              é apagado.
+            </p>
+          </div>
+
+          {categories.map((cat) => {
+            const Icon = cat.icon;
+            const selected = patch[cat.key] || [];
+            return (
+              <div key={cat.key}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${cat.color}`}>
+                    <Icon className="w-4 h-4" />
+                  </span>
+                  <h3 className="text-xs font-bold text-stone-800 uppercase tracking-wide">
+                    {cat.title}
+                  </h3>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {cat.options.map((opt) => (
+                    <Chip
+                      key={opt}
+                      active={selected.includes(opt)}
+                      onClick={() => toggle(cat.key, opt)}
+                    >
+                      {opt}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          <p className="text-[10px] text-stone-400 text-center leading-relaxed">
+            Dor, temperatura, peso e anotações continuam sendo registrados dia a dia.
+          </p>
+        </div>
+
+        <div className="border-t border-stone-200 px-4 py-3 bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <button
+            onClick={() => onApply(patch)}
+            disabled={selectedCount === 0}
+            className="w-full bg-rose-600 active:bg-rose-700 disabled:bg-stone-200 disabled:text-stone-400 text-white font-semibold text-sm py-3 rounded-xl"
+          >
+            {selectedCount === 0
+              ? 'Escolha ao menos uma opção'
+              : `Aplicar a ${ordered.length} ${ordered.length === 1 ? 'dia' : 'dias'}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Modal: artigo                                                       */
 /* ------------------------------------------------------------------ */
 
