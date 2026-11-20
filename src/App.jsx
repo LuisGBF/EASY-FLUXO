@@ -58,6 +58,8 @@ import {
   secondsToClock,
 } from './utils';
 
+import { computeCycleForecast } from './forecast';
+
 const STORAGE_KEY = 'ciclolivre_v3_profiles';
 const ACTIVE_KEY = 'ciclolivre_v3_active';
 const PERIOD_FLOWS = ['Leve', 'Moderado', 'Intenso', 'Coágulos'];
@@ -464,6 +466,120 @@ const inputClass =
   'w-full text-sm border border-stone-200 rounded-xl px-3 py-2.5 bg-white text-stone-800 focus:outline-none focus:ring-2 focus:ring-rose-400';
 
 /* ------------------------------------------------------------------ */
+/* Previsão do ciclo (tela inicial)                                    */
+/* ------------------------------------------------------------------ */
+
+function CycleForecastCard({ forecast }) {
+  if (!forecast || forecast.status === 'blocked') return null;
+
+  if (forecast.status !== 'ready') {
+    return (
+      <SectionCard>
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="w-4 h-4 text-rose-600" />
+          <h3 className="text-sm font-bold text-stone-900">Previsão do ciclo</h3>
+        </div>
+        <p className="text-xs text-stone-600 leading-relaxed">{forecast.message}</p>
+      </SectionCard>
+    );
+  }
+
+  const { nextPeriod, ovulation, fertileWindow, confidence, phase, cycleDay } = forecast;
+  const shortDate = (key) => formatBR(key, { day: '2-digit', month: '2-digit' });
+  const longDate = (key) =>
+    parseDateKey(key).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
+
+  const periodHeadline =
+    nextPeriod.daysUntil === 0
+      ? 'Hoje'
+      : nextPeriod.daysUntil > 0
+        ? `Em ${nextPeriod.daysUntil} ${nextPeriod.daysUntil === 1 ? 'dia' : 'dias'}`
+        : `Atrasada há ${Math.abs(nextPeriod.daysUntil)} ${Math.abs(nextPeriod.daysUntil) === 1 ? 'dia' : 'dias'}`;
+
+  const ovulationHeadline =
+    ovulation.daysUntil === 0
+      ? 'Hoje'
+      : ovulation.daysUntil > 0
+        ? `Em ${ovulation.daysUntil} ${ovulation.daysUntil === 1 ? 'dia' : 'dias'}`
+        : 'Já passou';
+
+  return (
+    <SectionCard className="bg-gradient-to-br from-rose-50/70 via-white to-amber-50/70 border-rose-100">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-rose-600" />
+          <h3 className="text-sm font-bold text-stone-900">Previsão do ciclo</h3>
+        </div>
+        {confidence && (
+          <span
+            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${confidence.className}`}
+          >
+            {confidence.label}
+          </span>
+        )}
+      </div>
+
+      {phase && (
+        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+          <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md border ${phase.className}`}>
+            {phase.label}
+          </span>
+          <span className="text-[11px] text-stone-500">Dia {cycleDay} do ciclo</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-2 mt-3">
+        <div className="rounded-xl bg-white/80 border border-rose-100 p-3">
+          <div className="flex items-center gap-1.5 text-rose-600">
+            <Droplets className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-semibold uppercase tracking-wide">
+              Próxima menstruação
+            </span>
+          </div>
+          <p className="mt-1 text-base font-bold text-stone-900 leading-tight">{periodHeadline}</p>
+          <p className="text-[11px] text-stone-600 mt-0.5">{longDate(nextPeriod.startKey)}</p>
+          <p className="text-[10px] text-stone-500 mt-1">
+            Janela provável: {shortDate(nextPeriod.windowStartKey)} – {shortDate(nextPeriod.windowEndKey)}
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-white/80 border border-amber-100 p-3">
+          <div className="flex items-center gap-1.5 text-amber-600">
+            <Heart className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-semibold uppercase tracking-wide">
+              Ovulação estimada
+            </span>
+          </div>
+          <p className="mt-1 text-base font-bold text-stone-900 leading-tight">
+            {ovulationHeadline}
+          </p>
+          <p className="text-[11px] text-stone-600 mt-0.5">{longDate(ovulation.dateKey)}</p>
+          <p className="text-[10px] text-stone-500 mt-1">
+            Janela fértil: {shortDate(fertileWindow.startKey)} – {shortDate(fertileWindow.endKey)}
+          </p>
+        </div>
+      </div>
+
+      {fertileWindow.containsToday && (
+        <div className="mt-2 flex gap-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-[11px]">
+          <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <p className="leading-relaxed">
+            Você está na janela fértil estimada (os ~6 dias de maior chance de concepção).
+          </p>
+        </div>
+      )}
+
+      {confidence?.note && (
+        <p className="text-[10px] text-stone-500 mt-2 leading-relaxed">{confidence.note}</p>
+      )}
+      <p className="text-[10px] text-stone-400 mt-1 leading-relaxed">
+        Estimativas baseadas no seu histórico. Não servem como método contraceptivo.
+      </p>
+    </SectionCard>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Aba: Hoje                                                           */
 /* ------------------------------------------------------------------ */
 
@@ -471,6 +587,7 @@ function TodayTab({
   profile,
   analytics,
   status,
+  forecast,
   todayLog,
   recommendedArticle,
   onOpenLogToday,
@@ -543,6 +660,8 @@ function TodayTab({
           </button>
         </div>
       </SectionCard>
+
+      <CycleForecastCard forecast={forecast} />
 
       <SectionCard>
         <div className="flex items-center justify-between mb-3">
@@ -1667,6 +1786,7 @@ export default function App() {
 
   const analytics = useMemo(() => computeCycleAnalytics(profile), [profile]);
   const status = useMemo(() => computeTodayStatus(profile, analytics), [profile, analytics]);
+  const forecast = useMemo(() => computeCycleForecast(profile, analytics), [profile, analytics]);
 
   const recommendedArticle = useMemo(() => {
     const match = ARTICLES.find(
@@ -1850,6 +1970,7 @@ export default function App() {
             profile={profile}
             analytics={analytics}
             status={status}
+            forecast={forecast}
             todayLog={todayLog}
             recommendedArticle={recommendedArticle}
             onOpenLogToday={() => {
